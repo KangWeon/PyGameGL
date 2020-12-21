@@ -8,7 +8,7 @@ from PIL import Image
 
 
 vertex_shader = """
-#version 130
+#version 410
 in vec4 position;
 in vec4 colour;
 in vec2 inTexCoords;
@@ -26,7 +26,7 @@ void main()
 """
 
 fragment_shader = """
-#version 130
+#version 410
 in vec4 newColour;     // needs to have the same name as the output from vertex shader
 in vec2 outTexCoords;  // needs to have the same name as the output from vertex shader
 out vec4 outColour;
@@ -39,7 +39,10 @@ void main()
 """
 
 vertices = [
-    -0.5, -0.5, 0.5, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,  # Front
+    -0.5, -0.5, 0.5, 1.0, 
+    1.0, 0.0, 0.0, 
+    1.0, 0.0, 0.0,  # Front
+    
     0.5, -0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0,
     0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     -0.5, 0.5, 0.5, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0,
@@ -83,18 +86,23 @@ indices = numpy.array(indices, dtype=numpy.uint32)
 
 
 def init_gl():
-    glShadeModel(GL_SMOOTH)
+    # glShadeModel(GL_SMOOTH)
     glClearColor(0.0, 0.0, 0.1, 1.0)
     glClearDepth(1.0)
     glEnable(GL_DEPTH_TEST)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glDepthFunc(GL_LEQUAL)
 
 
-def create_object(shader):
+def create_object():
     # Create a new VAO (Vertex Array Object) and bind it
     vertex_array_object = glGenVertexArrays(1)
     glBindVertexArray(vertex_array_object)
+
+    shader = OpenGL.GL.shaders.compileProgram(
+        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
+        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+    )
 
     # Generate buffers to hold our vertices
     vertex_buffer = glGenBuffers(1)
@@ -149,16 +157,17 @@ def create_object(shader):
     glBindVertexArray(0)
 
     # Unbind other stuff
-    glDisableVertexAttribArray(position)
+    # glDisableVertexAttribArray(position)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    return vertex_array_object
+    return shader, vertex_array_object
 
 
 def display(shader, vertex_array_object):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+    glUseProgram(shader)
     rot_x = pyrr.matrix44.create_from_x_rotation(0.5 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
     rot_y = pyrr.matrix44.create_from_y_rotation(0.8 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
     transform_location = glGetUniformLocation(shader, 'transformation')
@@ -167,7 +176,7 @@ def display(shader, vertex_array_object):
     glBindVertexArray(vertex_array_object)
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, None)  # Replaces glDrawArrays because we're drawing indices now.
     glBindVertexArray(0)
-
+    glUseProgram(0)
 
 def window_resize(width, height):
     pygame.display.set_mode((width, height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
@@ -178,16 +187,16 @@ def main():
     window_width = 512
     window_height = 512
     pygame.init()
+    
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     window_resize(window_width, window_height)
     init_gl()
 
-    shader = OpenGL.GL.shaders.compileProgram(
-        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
-        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
-    )
-
-    vertex_array_object = create_object(shader)
-    glUseProgram(shader)
+    shader, vertex_array_object = create_object()
+    # glUseProgram(shader)
 
     clock = pygame.time.Clock()
     looping = True

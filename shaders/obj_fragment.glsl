@@ -1,4 +1,4 @@
-#version 130
+#version 410
 in vec2 outTexCoords;  // needs to have the same name as the output from vertex shader
 out vec4 outColour;
 uniform sampler2D samplerTex;

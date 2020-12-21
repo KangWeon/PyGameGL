@@ -7,7 +7,7 @@ from PIL import Image
 
 
 vertex_shader = """
-#version 130
+#version 410
 in vec4 position;
 in vec4 colour;
 in vec2 inTexCoords;
@@ -23,7 +23,7 @@ void main()
 """
 
 fragment_shader = """
-#version 130
+#version 410
 in vec4 newColour;     // needs to have the same name as the output from vertex shader
 in vec2 outTexCoords;  // needs to have the same name as the output from vertex shader
 out vec4 outColour;
@@ -48,10 +48,15 @@ indices = [0, 1, 2,
 indices = numpy.array(indices, dtype=numpy.uint32)
 
 
-def create_object(shader):
+def create_object():
     # Create a new VAO (Vertex Array Object) and bind it
     vertex_array_object = glGenVertexArrays(1)
     glBindVertexArray(vertex_array_object)
+
+    shader = OpenGL.GL.shaders.compileProgram(
+        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
+        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+    )
 
     # Generate buffers to hold our vertices
     vertex_buffer = glGenBuffers(1)
@@ -85,6 +90,7 @@ def create_object(shader):
     # Texture filtering params
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
     # Load and convert Texture
     image = Image.open('res/crate.jpg')
     img_data = numpy.array(list(image.getdata()), numpy.uint8)
@@ -105,35 +111,35 @@ def create_object(shader):
     glBindVertexArray(0)
 
     # Unbind other stuff
-    glDisableVertexAttribArray(position)
+    # glDisableVertexAttribArray(position)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    return vertex_array_object
+    return shader, vertex_array_object
 
 
 def display(shader, vertex_array_object):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
+    
+    glUseProgram(shader)
     glBindVertexArray(vertex_array_object)
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)  # Replaces glDrawArrays because we're drawing indices now.
     glBindVertexArray(0)
-
+    glUseProgram(0)
 
 def main():
     pygame.init()
+
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     pygame.display.set_mode((512, 512), pygame.OPENGL | pygame.DOUBLEBUF)
     glClearColor(0.0, 0.0, 0.1, 1.0)
     glEnable(GL_DEPTH_TEST)
 
-    shader = OpenGL.GL.shaders.compileProgram(
-        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
-        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
-    )
-
-    vertex_array_object = create_object(shader)
-    glUseProgram(shader)
-
+    shader, vertex_array_object = create_object()
+    
     clock = pygame.time.Clock()
     looping = True
 

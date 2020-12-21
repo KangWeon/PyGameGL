@@ -11,12 +11,12 @@ from ObjLoader import ObjLoader
 
 
 def init_gl():
-    glShadeModel(GL_SMOOTH)
+    # glShadeModel(GL_SMOOTH)
     glClearColor(0.0, 0.0, 0.1, 1.0)
     glClearDepth(1.0)
     glEnable(GL_DEPTH_TEST)
-    glEnable(GL_TEXTURE_2D)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    # glEnable(GL_TEXTURE_2D)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glDepthFunc(GL_LEQUAL)
 
 
@@ -31,7 +31,7 @@ def window_resize(width, height):
     glLoadIdentity()
 
 
-def create_object(shader):
+def create_object():
     obj = ObjLoader()
     obj.load_model(Path('res', 'cube.obj'))
     texture_offset = len(obj.vertex_index) * len(obj.vert_coords[0]) * obj.model.itemsize
@@ -40,6 +40,9 @@ def create_object(shader):
     # Create a new VAO (Vertex Array Object) and bind it
     vertex_array_object = glGenVertexArrays(1)
     glBindVertexArray(vertex_array_object)
+
+    shader = compile_shader(Path('shaders', 'mvp_vertex.glsl'),
+                            Path('shaders', 'light_fragment.glsl'))
 
     # Generate buffers to hold our vertices
     vertex_buffer = glGenBuffers(1)
@@ -89,14 +92,16 @@ def create_object(shader):
     glBindVertexArray(0)
 
     # Unbind other stuff
-    glDisableVertexAttribArray(position)
+    # glDisableVertexAttribArray(position)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
 
-    return vertex_array_object, obj
+    return shader, vertex_array_object, obj
 
 
 def display(shader, vertex_array_object, aspect_ratio, obj):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+    glUseProgram(shader)
 
     rot_x = pyrr.matrix44.create_from_x_rotation(0.5 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
     rot_y = pyrr.matrix44.create_from_y_rotation(0.8 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
@@ -117,22 +122,25 @@ def display(shader, vertex_array_object, aspect_ratio, obj):
     glBindVertexArray(vertex_array_object)
     glDrawArrays(GL_TRIANGLES, 0, len(obj.vertex_index))
     glBindVertexArray(0)
-
+    glUseProgram(0)
 
 def main():
     window_width = 512
     window_height = 512
 
     pygame.init()
+
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     screen = pygame.display.set_mode((window_width, window_height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
     window_resize(window_width, window_height)
     init_gl()
 
-    shader = compile_shader(Path('shaders', 'mvp_vertex.glsl'),
-                            Path('shaders', 'light_fragment.glsl'))
-
-    vertex_array_object, obj = create_object(shader)
-    glUseProgram(shader)
+    
+    shader, vertex_array_object, obj = create_object()
+    # glUseProgram(shader)
 
     clock = pygame.time.Clock()
     looping = True
@@ -152,7 +160,7 @@ def main():
         pygame.display.set_caption("FPS: %.2f" % clock.get_fps())
         pygame.display.flip()
 
-    glUseProgram(0)
+    # glUseProgram(0)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-#version 130
+#version 410
 in vec2 outTexCoords;  // needs to have the same name as the output from vertex shader
 in vec3 fragNormals;
 out vec4 outColour;

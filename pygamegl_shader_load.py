@@ -53,38 +53,43 @@ indices = numpy.array(indices, dtype=numpy.uint32)
 
 
 def init_gl():
-    glShadeModel(GL_SMOOTH)
+    # glShadeModel(GL_SMOOTH)
     glClearColor(0.0, 0.0, 0.1, 1.0)
     glClearDepth(1.0)
     glEnable(GL_DEPTH_TEST)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glDepthFunc(GL_LEQUAL)
 
 
-def create_object(shader):
+def create_object():
     # Create a new VAO (Vertex Array Object) and bind it
     vertex_array_object = glGenVertexArrays(1)
     glBindVertexArray(vertex_array_object)
+
+    shader = compile_shader(Path('shaders', 'perspective_vertex.glsl'),
+                            Path('shaders', 'perspective_fragment.glsl'))
 
     # Generate buffers to hold our vertices
     vertex_buffer = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer)
 
-    # Generate buffers to hold buffer indices
-    element_buffer = glGenBuffers(1)
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer)
-
-    # Generate buffers to hold our texture
-    texture = glGenTextures(1)
-    glBindTexture(GL_TEXTURE_2D, texture)
-
     # Set the position of the 'position' in parameter of our shader and bind it.
     position = 0
     glBindAttribLocation(shader, position, 'position')
     glEnableVertexAttribArray(position)
+
     # Describe the position data layout in the buffer
     glVertexAttribPointer(position, 4, GL_FLOAT, False, vertices.itemsize * vertices_row_length, ctypes.c_void_p(0))
 
+    # Send the data over to the buffers
+    glBufferData(GL_ARRAY_BUFFER, vertices.itemsize * len(vertices), vertices, GL_STATIC_DRAW)       # Vertices array
+
+    # Generate buffers to hold buffer indices
+    element_buffer = glGenBuffers(1)
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_buffer)
+
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.itemsize * len(indices), indices, GL_STATIC_DRAW)  # Indices array
+    
     # Set the position of the 'colour' in parameter of our shader and bind it.
     colour = 1
     glBindAttribLocation(shader, colour, 'colour')
@@ -92,6 +97,12 @@ def create_object(shader):
     # Describe the position data layout in the buffer
     glVertexAttribPointer(colour, 4, GL_FLOAT, False, vertices.itemsize * vertices_row_length, ctypes.c_void_p(16))
 
+    # Generate buffers to hold our texture
+    texture = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture)
+
+    
+    
     # Set the position of the 'inTexCoords' in parameter of our shader and bind it.
     texture_coords = 2
     glBindAttribLocation(shader, texture_coords, 'inTexCoords')
@@ -110,25 +121,25 @@ def create_object(shader):
     image = Image.open(Path('res', 'crate.jpg'))
     img_data = image.convert('RGB').tobytes()
 
-    # Send the data over to the buffers
-    glBufferData(GL_ARRAY_BUFFER, vertices.itemsize * len(vertices), vertices, GL_STATIC_DRAW)       # Vertices array
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.itemsize * len(indices), indices, GL_STATIC_DRAW)  # Indices array
+    
+    
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image.width, image.height, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
 
     # Unbind the VAO first (Important)
     glBindVertexArray(0)
 
     # Unbind other stuff
-    glDisableVertexAttribArray(position)
+    # glDisableVertexAttribArray(position)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-    return vertex_array_object
+    return shader, vertex_array_object
 
 
 def display(shader, vertex_array_object, aspect_ratio):
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+    glUseProgram(shader)
     rot_x = pyrr.matrix44.create_from_x_rotation(0.5 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
     rot_y = pyrr.matrix44.create_from_y_rotation(0.8 * pygame.time.get_ticks() / 1000, dtype=numpy.float32)
     transform_location = glGetUniformLocation(shader, 'transformation')
@@ -149,7 +160,7 @@ def display(shader, vertex_array_object, aspect_ratio):
     glBindVertexArray(vertex_array_object)
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, None)  # Replaces glDrawArrays because we're drawing indices now.
     glBindVertexArray(0)
-
+    glUseProgram(0)
 
 def window_resize(width, height):
     pygame.display.set_mode((width, height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
@@ -160,14 +171,17 @@ def main():
     window_width = 512
     window_height = 512
     pygame.init()
+
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     window_resize(window_width, window_height)
     init_gl()
 
-    shader = compile_shader(Path('shaders', 'perspective_vertex.glsl'),
-                            Path('shaders', 'perspective_fragment.glsl'))
-
-    vertex_array_object = create_object(shader)
-    glUseProgram(shader)
+    
+    shader, vertex_array_object = create_object()
+    # glUseProgram(shader)
 
     clock = pygame.time.Clock()
     looping = True
@@ -187,7 +201,7 @@ def main():
         pygame.display.set_caption("FPS: %.2f" % clock.get_fps())
         pygame.display.flip()
 
-    glUseProgram(0)
+    # glUseProgram(0)
 
 
 if __name__ == '__main__':

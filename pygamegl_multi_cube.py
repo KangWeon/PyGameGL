@@ -11,18 +11,17 @@ from ObjLoader import ObjLoader
 
 
 def init_gl():
-    glShadeModel(GL_SMOOTH)
+    # glShadeModel(GL_SMOOTH)
     glClearColor(0.0, 0.0, 0.1, 1.0)
     glClearDepth(1.0)
     glEnable(GL_DEPTH_TEST)
     glEnable(GL_TEXTURE_2D)
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
+    # glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
     glDepthFunc(GL_LEQUAL)
 
 
 def window_resize(width, height):
     # pygame.display.set_mode((width, height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
-    # glViewport(0, 0, width, height)
     glViewport(0, 0, width, height)
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
@@ -140,6 +139,11 @@ def main():
     window_height = 512
 
     pygame.init()
+
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     screen = pygame.display.set_mode((window_width, window_height), pygame.OPENGL | pygame.DOUBLEBUF | pygame.RESIZABLE)
     window_resize(window_width, window_height)
     init_gl()

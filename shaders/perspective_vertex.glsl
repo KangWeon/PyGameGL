@@ -1,4 +1,4 @@
-#version 130
+#version 410
 in vec4 position;
 in vec4 colour;
 in vec2 inTexCoords;

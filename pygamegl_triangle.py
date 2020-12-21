@@ -5,8 +5,8 @@ import pygame
 import numpy
 
 vertex_shader = """
-#version 120
-attribute vec4 position;
+#version 410
+in vec4 position;
 void main()
 {
    gl_Position = position;
@@ -14,10 +14,11 @@ void main()
 """
 
 fragment_shader = """
-#version 120
+#version 410
+out vec4 fragColor;
 void main()
 {
-   gl_FragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+   fragColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 """
 
@@ -27,11 +28,15 @@ vertices = [-0.58, -0.5, 0.0, 1.0,
 
 vertices = numpy.array(vertices, dtype=numpy.float32)
 
-
-def create_object(shader):
+def create_object():
     # Create a new VAO (Vertex Array Object) and bind it
     vertex_array_object = glGenVertexArrays(1)
     glBindVertexArray(vertex_array_object)
+
+    shader = OpenGL.GL.shaders.compileProgram(
+        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
+        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
+    )
 
     # Generate buffers to hold our vertices
     vertex_buffer = glGenBuffers(1)
@@ -43,18 +48,19 @@ def create_object(shader):
 
     # Describe the position data layout in the buffer
     glVertexAttribPointer(position, 4, GL_FLOAT, False, 0, ctypes.c_void_p(0))
-
     # Send the data over to the buffer
     glBufferData(GL_ARRAY_BUFFER, 48, vertices, GL_STATIC_DRAW)
-
+    
     # Unbind the VAO first (Important)
     glBindVertexArray(0)
-
+    
     # Unbind other stuff
-    glDisableVertexAttribArray(position)
+    # glDisableVertexAttribArray(position)
     glBindBuffer(GL_ARRAY_BUFFER, 0)
+    
+    
 
-    return vertex_array_object
+    return shader, vertex_array_object
 
 
 def display(shader, vertex_array_object):
@@ -70,16 +76,16 @@ def display(shader, vertex_array_object):
 
 def main():
     pygame.init()
+    
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MAJOR_VERSION, 4)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_MINOR_VERSION, 1)
+    pygame.display.gl_set_attribute(pygame.GL_CONTEXT_PROFILE_MASK, pygame.GL_CONTEXT_PROFILE_CORE)
+
     pygame.display.set_mode((512, 512), pygame.OPENGL | pygame.DOUBLEBUF)
     glClearColor(0.1, 0.2, 0.3, 1.0)
     glEnable(GL_DEPTH_TEST)
-
-    shader = OpenGL.GL.shaders.compileProgram(
-        OpenGL.GL.shaders.compileShader(vertex_shader, GL_VERTEX_SHADER),
-        OpenGL.GL.shaders.compileShader(fragment_shader, GL_FRAGMENT_SHADER)
-    )
-
-    vertex_array_object = create_object(shader)
+    print(glGetString(GL_VERSION))
+    shader, vertex_array_object = create_object()
 
     clock = pygame.time.Clock()
 

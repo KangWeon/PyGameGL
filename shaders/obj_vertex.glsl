@@ -1,4 +1,4 @@
-#version 130
+#version 410
 in vec3 position;
 in vec2 inTexCoords;
 uniform mat4 transformation;
